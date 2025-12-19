@@ -3,6 +3,7 @@ import multer from "multer";
 import XLSX from "xlsx";
 import Groq from "groq-sdk";
 import cors from "cors";
+import fs from "fs";
 
 const app = express();
 app.use(cors());
@@ -19,7 +20,9 @@ app.post("/generate", upload.array("images", 50), async (req, res) => {
     const results = [];
 
     for (const file of req.files) {
-      const imageUrl = `https://${req.get("host")}/uploads/${file.filename}`;
+
+      // 🔥 READ IMAGE AS BASE64 (THIS IS THE KEY FIX)
+      const imageBase64 = fs.readFileSync(file.path, { encoding: "base64" });
 
       const prompt = `
 You are a professional Adobe Stock contributor.
@@ -46,16 +49,22 @@ Return ONLY valid JSON:
             role: "user",
             content: [
               { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: imageUrl } }
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${imageBase64}`
+                }
+              }
             ]
           }
         ]
       });
 
-      const meta = JSON.parse(response.choices[0].message.content);
+      const metaText = response.choices[0].message.content;
+      const meta = JSON.parse(metaText);
 
       results.push({
-        Filename: file.originalname,   // ✅ ADOBE STOCK MATCH
+        Filename: file.originalname,
         Title: meta.title,
         Description: meta.description,
         Keywords: meta.keywords
@@ -66,12 +75,13 @@ Return ONLY valid JSON:
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "AdobeStock");
 
-    const fileName = "adobe_stock_metadata.xlsx";
-    XLSX.writeFile(workbook, fileName);
+    const outputFile = "adobe_stock_metadata.xlsx";
+    XLSX.writeFile(workbook, outputFile);
 
-    res.download(fileName);
+    res.download(outputFile);
 
   } catch (err) {
+    console.error(err); // 👈 IMPORTANT FOR DEBUG
     res.status(500).json({ error: "Metadata generation failed" });
   }
 });
@@ -79,4 +89,3 @@ Return ONLY valid JSON:
 app.listen(3000, () => {
   console.log("Server running on port 3000");
 });
-
