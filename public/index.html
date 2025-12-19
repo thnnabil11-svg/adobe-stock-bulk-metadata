@@ -1,1 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Adobe Stock Bulk Metadata Generator</title>
+</head>
+<body>
+  <h2>Adobe Stock Image Metadata Generator</h2>
+  <p>Upload up to 50 images. Excel will download automatically.</p>
+
+  <form action="/generate" method="post" enctype="multipart/form-data">
+    <input type="file" name="images" multiple accept="image/*" required />
+    <br><br>
+    <button type="submit">Generate Metadata (Excel)</button>
+  </form>
+</body>
+</html>
 
